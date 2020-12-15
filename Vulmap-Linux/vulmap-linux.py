@@ -16,6 +16,7 @@ import argparse
 import platform
 import sys
 import warnings
+import os
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 pV = sys.version_info[0]
@@ -94,104 +95,6 @@ def sendRequest(queryData):
 
 	return response
 
-def outResults(q):
-	global exploit_sum
-
-	queryData = q[:-1]
-	queryData += ']'
-	response = sendRequest(queryData)
-
-	if response['status_message'] == 'success':
-		for i in range(0, len(response["results"])):
-			if args.verbose:
-				print(bcolors.OKGREEN + "[*] " + bcolors.ENDC + "Vulnerability Found!")
-
-				print(bcolors.OKGREEN + "[>] " + bcolors.ENDC + "Product: " + productFilter(response['results'][i]['query_string']))
-
-				for j in range(0, response['results'][i]['total_hits']):
-					try:
-						print(bcolors.OKGREEN + '[+] ' + bcolors.ENDC + 'CVEID: ' + response['results'][i]['vulnerabilities'][j]['cveid'] + '	Score: ' + str(response['results'][i]['vulnerabilities'][j]['cvssv2_basescore']) + '	URL: ' + response['results'][i]['vulnerabilities'][j]['url'])
-						if response['results'][i]['vulnerabilities'][j]['exploits']:
-
-							print(bcolors.FAIL + '	[*]' + bcolors.ENDC + ' Available Exploits!')
-
-							for z in range(0, len(response['results'][i]['vulnerabilities'][j]['exploits'])):
-
-								exploit_sum += 1
-
-								edb = response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'].split("=")
-
-								print(bcolors.FAIL + "	[!] " + bcolors.ENDC + "Exploit ID: EDB" + edb[2] + "	URL: " + response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'] + " (" + response['results'][i]['vulnerabilities'][j]['exploits'][z]['title'] + ")")
-					except Exception as e:
-						continue
-					print(bcolors.OKGREEN + '[+] ' + bcolors.ENDC + 'CVEID: ' + response['results'][i]['vulnerabilities'][j]['cveid'] + '	Score: ' + str(response['results'][i]['vulnerabilities'][j]['cvssv2_basescore']) + '	URL: ' + response['results'][i]['vulnerabilities'][j]['url'])
-				print("\n")
-			elif args.exploit:
-				for j in range(0, response['results'][i]['total_hits']):
-					try:
-						if response['results'][i]['vulnerabilities'][j]['exploits']:
-
-							print(bcolors.OKGREEN + "[*] " + bcolors.ENDC + "Exploit Found!")
-							print(bcolors.OKGREEN + "[>] " + bcolors.ENDC + "Product: " + productFilter(response['results'][i]['query_string']))
-
-							for z in range(0, len(response['results'][i]['vulnerabilities'][j]['exploits'])):
-
-								exploit_sum += 1
-
-								edb = response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'].split("=")
-
-								print(bcolors.OKGREEN + "[+] " + bcolors.ENDC + "Title: " + response['results'][i]['vulnerabilities'][j]['exploits'][z]['title'])
-								print(bcolors.FAIL + "[!] Exploit ID: EDB" + edb[2] + bcolors.ENDC + "\n")
-
-								getExploit("EDB" + edb[2])
-					except Exception as e:
-						continue
-			elif args.onlyexploitable:
-				for j in range(0, response['results'][i]['total_hits']):
-					try:
-						if response['results'][i]['vulnerabilities'][j]['exploits']:
-
-							print(bcolors.OKGREEN + "[*] " + bcolors.ENDC + "Exploit Found!")
-							print(bcolors.OKGREEN + "[>] " + bcolors.ENDC + "Product: " + productFilter(response['results'][i]['query_string']))
-
-							for z in range(0, len(response['results'][i]['vulnerabilities'][j]['exploits'])):
-
-								exploit_sum += 1
-
-								edb = response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'].split("=")
-
-								print(bcolors.OKGREEN + "[+] " + bcolors.ENDC + "Title: " + response['results'][i]['vulnerabilities'][j]['exploits'][z]['title'])
-								print(bcolors.FAIL + "[!] Exploit ID: EDB" + edb[2] + bcolors.ENDC + "\n")
-					except Exception as e:
-						continue
-
-			else:
-				print(bcolors.OKGREEN + "[*] " + bcolors.ENDC + "Vulnerability Found!")
-
-				print(bcolors.OKGREEN + "[>] " + bcolors.ENDC + "Product: " + productFilter(response['results'][i]['query_string']))
-
-				for j in range(0, response['results'][i]['total_hits']):
-					try:
-						print(bcolors.OKGREEN + '[+] ' + bcolors.ENDC + 'CVEID: ' + response['results'][i]['vulnerabilities'][j]['cveid'] + '	Score: ' + str(response['results'][i]['vulnerabilities'][j]['cvssv2_basescore']) + '	URL: ' + response['results'][i]['vulnerabilities'][j]['url'])
-						if response['results'][i]['vulnerabilities'][j]['exploits']:
-
-							print(bcolors.FAIL + '	[*]' + bcolors.ENDC + ' Available Exploits!')
-
-							for z in range(0, len(response['results'][i]['vulnerabilities'][j]['exploits'])):
-
-								exploit_sum += 1
-
-								edb = response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'].split("=")
-
-								print(bcolors.FAIL + "	[!] " + bcolors.ENDC + "Title: " + response['results'][i]['vulnerabilities'][j]['exploits'][z]['title'] + "	URL: " + response['results'][i]['vulnerabilities'][j]['exploits'][z]['url'])
-					except Exception as e:
-						continue
-					print(bcolors.OKGREEN + '[+] ' + bcolors.ENDC + 'CVEID: ' + response['results'][i]['vulnerabilities'][j]['cveid'] + '	Score: ' + str(response['results'][i]['vulnerabilities'][j]['cvssv2_basescore']) + '	URL: ' + response['results'][i]['vulnerabilities'][j]['url'])
-				print("\n")
-	elif response['status'] == '1015':
-		print(response['message'])
-	else:
-		pass
 
 def getExploit(exploit_ID):
 	url = 'https://vulmon.com/downloadexploit?qid=' + exploit_ID
@@ -229,20 +132,11 @@ def getProductList():
 	action = subprocess.Popen(dpkg, shell = True, stdout = subprocess.PIPE)
 	results = action.communicate()[0]
 	if pV == 2:
-		tempList = str(results).split('\n')
+	        tempList = str(results).split('\n')
 	else:
-		tempList = str(results).split('\\n')
+                tempList = str(results).split('\\n')
 	for i in range(0,len(tempList)-1):
-		productList.append(tempList[i].split(" "))
-	if args.CollectInventory:
-		print("Saving software inventory to " +args.CollectInventory)
-		with open(args.CollectInventory, 'w') as outfile:
-			json.dump(productList, outfile)
-		sys.exit(0)
-	if args.InventoryInFile:
-		print("Saving software inventory to " +args.InventoryInFile)
-		with open(args.InventoryInFile, 'w') as outfile:
-			json.dump(productList, outfile)
+                productList.append(tempList[i].split(" "))
 
 def vulnerabilityScan():
 	global queryData
@@ -284,7 +178,7 @@ def banner():
 	print("  ██╔╝███████╗╚████╔╝ ╚██████╔╝███████╗██║ ╚═╝ ██║██║  ██║██║      ")
 	print("  ╚═╝ ╚══════╝ ╚═══╝   ╚═════╝ ╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝      ")
 	print("===================================================================")
-	print("\                       Vulmon Mapper v2.2                        /")
+	print("\ Vulmon Mapper v2.2 cvedetails version forked by pedroelbanquero /")
 	print(" \                        www.vulmon.com                         / ")
 	print("  \=============================================================/\n")
 
@@ -302,14 +196,12 @@ class bcolors:
 # MAIN PROGRAM
 #==========================================================================
 if __name__ == '__main__':
-	banner()
-	args()
-	if args.exploit_ID:
-		getExploit(args.exploit_ID)
-	elif args.InventoryOutFile:
-		ReadFromFile(args.InventoryOutFile)
-		print(bcolors.HEADER + "[Status] " + bcolors.ENDC + "Total Exploits: " + str(exploit_sum) + "\n")
-	else:
-		getProductList()
-		vulnerabilityScan()
-		print(bcolors.HEADER + "[Status] " + bcolors.ENDC + "Total Exploits: " + str(exploit_sum) + "\n")
+
+        print("CVEDETAILS LOCAL VULNERABILITY SCANNER")
+        getProductList()
+        print(productList)
+        for x in productList:
+
+            os.system("python3 cvedetails.py --product "+x[0]+" --version "+x[1])
+
+
